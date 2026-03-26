@@ -154,46 +154,49 @@ export class ConfigManager {
             return undefined;
         }
 
+        // Determine current active preset (either selected or auto-selected first one)
+        const activePreset = this.currentPreset || presets[0].name;
+
         const items: vscode.QuickPickItem[] = [
-            {
-                label: '$(pencil) Enter Custom Arguments',
-                description: 'Type arguments manually'
-            },
-            {
-                label: '$(clear-all) Clear Current Preset',
-                description: 'Use default arguments'
-            },
-            { label: '', kind: vscode.QuickPickItemKind.Separator },
             ...presets.map(preset => ({
                 label: preset.name,
                 description: preset.args.join(' '),
-                detail: this.currentPreset === preset.name ? '$(check) Current' : undefined
-            }))
+                detail: activePreset === preset.name ? '$(check) Active - will be used for all test runs' : 'Click to activate'
+            })),
+            { label: '', kind: vscode.QuickPickItemKind.Separator },
+            {
+                label: '$(add) Create New Preset',
+                description: 'Add a new argument preset'
+            },
+            {
+                label: '$(settings-gear) Open Settings',
+                description: 'Configure presets in settings'
+            }
         ];
 
         const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select an argument preset',
-            title: 'Behave Test Arguments'
+            placeHolder: `Current: ${activePreset} - Select a preset to use for all test runs`,
+            title: 'Behave Test Explorer - Select Argument Preset'
         });
 
         if (!selected) {
             return undefined;
         }
 
-        if (selected.label === '$(pencil) Enter Custom Arguments') {
-            return this.promptForArgs();
+        if (selected.label === '$(add) Create New Preset') {
+            await this.createPreset();
+            return undefined;
         }
 
-        if (selected.label === '$(clear-all) Clear Current Preset') {
-            await this.setCurrentPreset(undefined);
-            vscode.window.showInformationMessage('Using default arguments');
-            return this.getCurrentArgs();
+        if (selected.label === '$(settings-gear) Open Settings') {
+            await this.openSettings();
+            return undefined;
         }
 
         const preset = presets.find(p => p.name === selected.label);
         if (preset) {
             await this.setCurrentPreset(preset.name);
-            vscode.window.showInformationMessage(`Using preset: ${preset.name}`);
+            vscode.window.showInformationMessage(`Preset "${preset.name}" is now active for all test runs`);
             return preset.args;
         }
 

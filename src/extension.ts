@@ -14,8 +14,8 @@ export function activate(context: vscode.ExtensionContext) {
     configManager = new ConfigManager();
     configManager.initialize(context);
 
-    // Initialize test controller
-    testController = new BehaveTestController(context);
+    // Initialize test controller with shared config manager
+    testController = new BehaveTestController(context, configManager);
 
     // Create status bar item
     statusBarItem = vscode.window.createStatusBarItem(
@@ -23,7 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
         100
     );
     statusBarItem.command = 'behaveTestExplorer.selectArgPreset';
-    statusBarItem.tooltip = 'Click to select argument preset';
     updateStatusBar();
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
@@ -76,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showWarningMessage('Please select a test to debug');
                 return;
             }
-            
+
             // Trigger debug through the test controller
             const controller = testController?.getController();
             if (controller) {
@@ -117,6 +116,9 @@ export function activate(context: vscode.ExtensionContext) {
 function updateStatusBar() {
     if (statusBarItem && configManager) {
         statusBarItem.text = configManager.getStatusText();
+        const args = configManager.getCurrentArgs();
+        const argsPreview = args.length > 0 ? args.join(' ') : '(none)';
+        statusBarItem.tooltip = `Behave Test Explorer\nActive Preset: ${configManager.getCurrentPreset() || 'Auto'}\nArguments: ${argsPreview}\n\nClick to change preset`;
     }
 }
 
@@ -225,10 +227,10 @@ class BehaveDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
         for (let i = 0; i < feature.scenarios.length; i++) {
             const scenario = feature.scenarios[i];
             const nextScenario = feature.scenarios[i + 1];
-            
+
             const startLine = scenario.line - 1;
-            const endLine = nextScenario 
-                ? nextScenario.line - 2 
+            const endLine = nextScenario
+                ? nextScenario.line - 2
                 : document.lineCount - 1;
 
             const scenarioRange = new vscode.Range(
@@ -240,8 +242,8 @@ class BehaveDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                 scenario.name,
                 scenario.tags.filter(t => !feature.tags.some(ft => ft.name === t.name))
                     .map(t => t.name).join(' '),
-                scenario.type === 'Scenario Outline' 
-                    ? vscode.SymbolKind.Interface 
+                scenario.type === 'Scenario Outline'
+                    ? vscode.SymbolKind.Interface
                     : vscode.SymbolKind.Method,
                 scenarioRange,
                 new vscode.Range(

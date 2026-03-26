@@ -33,14 +33,8 @@ export class TestRunner {
             return { success: false, output: '', error: 'No workspace folder found' };
         }
 
-        // Get relative path to feature file
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, feature.uri.fsPath);
-
         // Build arguments
         const args = await this.buildArgs(feature, undefined, customArgs);
-
-        // Add feature file path
-        args.push(`--include=${relativePath}`);
 
         return this.executeRunner(workspaceFolder.uri.fsPath, args, token);
     }
@@ -59,7 +53,6 @@ export class TestRunner {
             return { success: false, output: '', error: 'No workspace folder found' };
         }
 
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, feature.uri.fsPath);
         const args = await this.buildArgs(feature, scenario, customArgs);
 
         // Use scenario name or tag to target specific scenario
@@ -75,8 +68,6 @@ export class TestRunner {
             // Fall back to using --name with scenario name
             args.push(`--name=${this.escapeScenarioName(scenario.name)}`);
         }
-
-        args.push(`--include=${relativePath}`);
 
         return this.executeRunner(workspaceFolder.uri.fsPath, args, token);
     }
@@ -105,9 +96,7 @@ export class TestRunner {
             throw new Error('No workspace folder found');
         }
 
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, feature.uri.fsPath);
         const args = await this.buildArgs(feature, undefined, customArgs);
-        args.push(`--include=${relativePath}`);
 
         await this.launchDebugSession(workspaceFolder.uri.fsPath, args);
     }
@@ -125,7 +114,6 @@ export class TestRunner {
             throw new Error('No workspace folder found');
         }
 
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, feature.uri.fsPath);
         const args = await this.buildArgs(feature, scenario, customArgs);
 
         const uniqueTags = scenario.tags.filter(
@@ -137,8 +125,6 @@ export class TestRunner {
         } else {
             args.push(`--name=${this.escapeScenarioName(scenario.name)}`);
         }
-
-        args.push(`--include=${relativePath}`);
 
         await this.launchDebugSession(workspaceFolder.uri.fsPath, args);
     }
@@ -227,13 +213,20 @@ export class TestRunner {
             childProcess.on('close', (code: number | null) => {
                 this.runningProcesses.delete(processId);
 
-                const success = code === 0;
+                // Check both exit code AND output for failure indicators
+                const combinedOutput = output + errorOutput;
+                const hasFailureInOutput = this.detectFailureInOutput(combinedOutput);
+                const success = code === 0 && !hasFailureInOutput;
+
                 this.outputChannel.appendLine(`\nProcess exited with code: ${code}`);
+                if (hasFailureInOutput && code === 0) {
+                    this.outputChannel.appendLine(`Note: Test failures detected in output despite exit code 0`);
+                }
 
                 resolve({
                     success,
-                    output: output + errorOutput,
-                    error: success ? undefined : errorOutput || `Process exited with code ${code}`
+                    output: combinedOutput,
+                    error: success ? undefined : this.extractFailureMessage(combinedOutput) || errorOutput || `Process exited with code ${code}`
                 });
             });
 
@@ -258,11 +251,16 @@ export class TestRunner {
         const pythonPath = config.get<string>('pythonPath', 'python');
         const runnerScript = config.get<string>('runnerScript', 'runner.py');
 
+        // Handle absolute vs relative runner script paths
+        const program = path.isAbsolute(runnerScript)
+            ? runnerScript
+            : `\${workspaceFolder}/${runnerScript}`;
+
         const debugConfig: vscode.DebugConfiguration = {
             name: 'Debug Behave Test',
             type: 'debugpy',
             request: 'launch',
-            program: `\${workspaceFolder}/${runnerScript}`,
+            program: program,
             console: 'integratedTerminal',
             args: args,
             cwd: cwd,
@@ -273,6 +271,55 @@ export class TestRunner {
             vscode.workspace.workspaceFolders?.[0],
             debugConfig
         );
+    }
+
+    /**
+     * Detect if there are test failures in the output
+     */
+    private detectFailureInOutput(output: string): boolean {
+        const failurePatterns = [
+            /Failing scenarios:/i,
+            /\d+ features? passed,\s*\d+ failed/i,
+            /\d+ scenarios? passed,\s*\d+ failed/i,
+            /\d+ steps? passed,\s*\d+ failed/i,
+            /FAILED/,
+            /AssertionError/i,
+            /Assertion failed/i,
+            /Error:/i,
+            /Traceback \(most recent call last\)/i,
+            /failures=\d+[^0]/i,
+            /errors=\d+[^0]/i,
+        ];
+
+        return failurePatterns.some(pattern => pattern.test(output));
+    }
+
+    /**
+     * Extract a meaningful failure message from the output
+     */
+    private extractFailureMessage(output: string): string | undefined {
+        // Try to find specific failure information
+        const patterns = [
+            /Failing scenarios:[\s\S]*?(?=\n\n|\d+ feature)/i,
+            /AssertionError:.*$/m,
+            /Assertion failed:.*$/m,
+            /Error:.*$/m,
+        ];
+
+        for (const pattern of patterns) {
+            const match = output.match(pattern);
+            if (match) {
+                return match[0].trim().substring(0, 500); // Limit to 500 chars
+            }
+        }
+
+        // Look for summary line with failures
+        const summaryMatch = output.match(/\d+ scenarios?.*\d+ failed/i);
+        if (summaryMatch) {
+            return summaryMatch[0];
+        }
+
+        return undefined;
     }
 
     /**

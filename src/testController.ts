@@ -22,14 +22,13 @@ export class BehaveTestController {
     private workspaceFolder: vscode.WorkspaceFolder | undefined;
     private featuresPath: string = 'features';
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, configManager: ConfigManager) {
         this.controller = vscode.tests.createTestController(
             'behaveTestController',
             'Behave Tests'
         );
 
-        this.configManager = new ConfigManager();
-        this.configManager.initialize(context);
+        this.configManager = configManager;
         this.testRunner = new TestRunner(this.configManager);
 
         // Register run profiles
@@ -71,7 +70,7 @@ export class BehaveTestController {
     private setupFileWatcher(): void {
         const config = vscode.workspace.getConfiguration('behaveTestExplorer');
         this.featuresPath = config.get<string>('featuresPath', 'features');
-        
+
         this.fileWatcher = vscode.workspace.createFileSystemWatcher(
             `**/${this.featuresPath}/**/*.feature`
         );
@@ -119,19 +118,19 @@ export class BehaveTestController {
         const featuresBasePath = path.join(workspaceFolder.uri.fsPath, this.featuresPath);
         const featureFilePath = feature.uri.fsPath;
         const relativePath = path.relative(featuresBasePath, featureFilePath);
-        
+
         // Split the path to get folder hierarchy
         const pathParts = relativePath.split(path.sep);
         const fileName = pathParts.pop()!; // Remove the filename
-        
+
         // Get or create the parent folder item
         let parentItem: vscode.TestItem | undefined;
         let currentPath = '';
-        
+
         for (const folderName of pathParts) {
             const previousPath = currentPath;
             currentPath = currentPath ? path.join(currentPath, folderName) : folderName;
-            
+
             if (!this.folderItems.has(currentPath)) {
                 // Create folder item
                 const folderId = `folder:${currentPath}`;
@@ -140,15 +139,15 @@ export class BehaveTestController {
                     `📁 ${folderName}`,
                     vscode.Uri.file(path.join(featuresBasePath, currentPath))
                 );
-                
+
                 // Store folder metadata
                 this.testItemMap.set(folderItem, {
                     type: 'folder',
                     folderPath: currentPath
                 });
-                
+
                 this.folderItems.set(currentPath, folderItem);
-                
+
                 // Add to parent or root
                 if (parentItem) {
                     parentItem.children.add(folderItem);
@@ -156,13 +155,13 @@ export class BehaveTestController {
                     this.controller.items.add(folderItem);
                 }
             }
-            
+
             parentItem = this.folderItems.get(currentPath);
         }
-        
+
         // Create the feature item
         const featureItem = this.createFeatureItem(feature);
-        
+
         // Add to parent folder or root
         if (parentItem) {
             parentItem.children.add(featureItem);
@@ -181,7 +180,7 @@ export class BehaveTestController {
             feature.name,
             feature.uri
         );
-        
+
         featureItem.range = new vscode.Range(
             new vscode.Position(feature.line - 1, 0),
             new vscode.Position(feature.line - 1, 0)
@@ -367,7 +366,7 @@ export class BehaveTestController {
             if (data.type === 'feature' && data.feature) {
                 // Run all scenarios in the feature
                 result = await this.testRunner.runFeature(data.feature, token, configuredArgs);
-                
+
                 // Mark all child scenarios based on parent result
                 item.children.forEach(child => {
                     if (result.success) {
@@ -442,7 +441,7 @@ export class BehaveTestController {
             } else if (data.type === 'scenario' && data.scenario && data.feature) {
                 await this.testRunner.debugScenario(data.feature, data.scenario, configuredArgs);
             }
-            
+
             run.passed(item);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -476,7 +475,7 @@ export class BehaveTestController {
      */
     public async runByTag(): Promise<void> {
         const tags = FeatureParser.getAllTags(this.features);
-        
+
         const selectedTag = await vscode.window.showQuickPick(tags, {
             placeHolder: 'Select a tag to run',
             title: 'Run Scenarios by Tag'
