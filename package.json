@@ -1,0 +1,178 @@
+{
+  "name": "behave-test-explorer",
+  "displayName": "Behave Test Explorer",
+  "description": "Run and debug Behave BDD tests from VS Code Test Explorer with custom arguments support",
+  "version": "0.1.0",
+  "publisher": "behave-test-explorer",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "behave",
+    "bdd",
+    "gherkin",
+    "cucumber",
+    "test",
+    "testing",
+    "feature"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.feature",
+    "onLanguage:feature"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Behave Test Explorer",
+      "properties": {
+        "behaveTestExplorer.runnerScript": {
+          "type": "string",
+          "default": "runner.py",
+          "description": "Path to the runner script (relative to workspace root)"
+        },
+        "behaveTestExplorer.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable"
+        },
+        "behaveTestExplorer.featuresPath": {
+          "type": "string",
+          "default": "features",
+          "description": "Path to features directory (relative to workspace root)"
+        },
+        "behaveTestExplorer.defaultArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Default arguments to pass to the runner script"
+        },
+        "behaveTestExplorer.customArgs": {
+          "type": "object",
+          "default": {},
+          "description": "Custom argument presets (name -> array of args)",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "behaveTestExplorer.excludeTag": {
+          "type": "string",
+          "default": "@ignore",
+          "description": "Tag to exclude from test runs (--exclude_tag=value)"
+        },
+        "behaveTestExplorer.useDebugpy": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use debugpy for debugging tests"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "behaveTestExplorer.refreshTests",
+        "title": "Refresh Tests",
+        "icon": "$(refresh)",
+        "category": "Behave Test Explorer"
+      },
+      {
+        "command": "behaveTestExplorer.runWithArgs",
+        "title": "Run with Custom Arguments",
+        "icon": "$(play)",
+        "category": "Behave Test Explorer"
+      },
+      {
+        "command": "behaveTestExplorer.configureArgs",
+        "title": "Configure Arguments",
+        "icon": "$(gear)",
+        "category": "Behave Test Explorer"
+      },
+      {
+        "command": "behaveTestExplorer.selectArgPreset",
+        "title": "Select Argument Preset",
+        "icon": "$(list-selection)",
+        "category": "Behave Test Explorer"
+      },
+      {
+        "command": "behaveTestExplorer.runScenarioWithTag",
+        "title": "Run Scenario by Tag",
+        "icon": "$(tag)",
+        "category": "Behave Test Explorer"
+      },
+      {
+        "command": "behaveTestExplorer.debugTest",
+        "title": "Debug Test",
+        "icon": "$(debug)",
+        "category": "Behave Test Explorer"
+      }
+    ],
+    "menus": {
+      "testing/item/context": [
+        {
+          "command": "behaveTestExplorer.runWithArgs",
+          "group": "inline@1"
+        },
+        {
+          "command": "behaveTestExplorer.debugTest",
+          "group": "inline@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "behaveTestExplorer.refreshTests"
+        },
+        {
+          "command": "behaveTestExplorer.runWithArgs"
+        },
+        {
+          "command": "behaveTestExplorer.configureArgs"
+        },
+        {
+          "command": "behaveTestExplorer.selectArgPreset"
+        },
+        {
+          "command": "behaveTestExplorer.runScenarioWithTag"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "feature",
+        "aliases": [
+          "Gherkin",
+          "Feature"
+        ],
+        "extensions": [
+          ".feature"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sheikhjebran/vs_extension_behave_test_explorer"
+  }
+}
