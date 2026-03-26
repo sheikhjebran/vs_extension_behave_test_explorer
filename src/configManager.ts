@@ -57,8 +57,10 @@ export class ConfigManager {
 
     /**
      * Get arguments for the current preset or default args
+     * If no preset is selected but presets exist, auto-select the first one
      */
     public getCurrentArgs(): string[] {
+        // If a preset is selected, use it
         if (this.currentPreset) {
             const preset = this.getPreset(this.currentPreset);
             if (preset) {
@@ -66,7 +68,15 @@ export class ConfigManager {
             }
         }
 
-        // Return default args
+        // If no preset selected, check if presets exist and auto-select first one
+        const presets = this.getPresets();
+        if (presets.length > 0) {
+            // Auto-select first preset
+            this.currentPreset = presets[0].name;
+            return presets[0].args;
+        }
+
+        // Return default args if no presets configured
         const config = vscode.workspace.getConfiguration('behaveTestExplorer');
         return config.get<string[]>('defaultArgs', []);
     }
@@ -77,7 +87,7 @@ export class ConfigManager {
     public async promptForArgs(): Promise<string[] | undefined> {
         const input = await vscode.window.showInputBox({
             prompt: 'Enter custom arguments (space-separated)',
-            placeHolder: '--product=refProd --solution=Cellular --board=BOARD_NAME --tag=@mytag',
+            placeHolder: '--tag=@smoke --env=staging',
             value: this.getCurrentArgs().join(' ')
         });
 
@@ -302,8 +312,15 @@ export class ConfigManager {
      * Get status bar text showing current configuration
      */
     public getStatusText(): string {
+        // If preset is explicitly selected, show it
         if (this.currentPreset) {
             return `$(beaker) ${this.currentPreset}`;
+        }
+
+        // If presets exist but none selected, show first one (auto-select behavior)
+        const presets = this.getPresets();
+        if (presets.length > 0) {
+            return `$(beaker) ${presets[0].name}`;
         }
 
         return '$(beaker) Behave';

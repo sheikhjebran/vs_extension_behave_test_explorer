@@ -37,7 +37,8 @@ export class FeatureParser {
     private static readonly FEATURE_REGEX = /^\s*Feature:\s*(.+)$/;
     private static readonly SCENARIO_REGEX = /^\s*(Scenario|Scenario Outline):\s*(.+)$/;
     private static readonly BACKGROUND_REGEX = /^\s*Background:\s*(.*)$/;
-    private static readonly TAG_REGEX = /@[\w-]+/g;
+    // Updated regex to capture complete tags including colons and numbers (e.g., @tc:1223)
+    private static readonly TAG_REGEX = /@[^\s]+/g;
     private static readonly EXAMPLES_REGEX = /^\s*Examples:\s*(.*)$/;
 
     /**
@@ -75,7 +76,7 @@ export class FeatureParser {
                     name: tag,
                     line: lineNumber
                 }));
-                
+
                 if (inExamples) {
                     currentExampleTags.push(...tags);
                 } else {
@@ -123,10 +124,10 @@ export class FeatureParser {
                     tags: [...currentTags],
                     type: scenarioMatch[1] as 'Scenario' | 'Scenario Outline'
                 };
-                
+
                 // Inherit feature tags
                 currentScenario.tags = [
-                    ...feature.tags.filter(ft => 
+                    ...feature.tags.filter(ft =>
                         !currentScenario!.tags.some(st => st.name === ft.name)
                     ),
                     ...currentScenario.tags
@@ -183,8 +184,8 @@ export class FeatureParser {
      * Check if line is a Gherkin keyword line
      */
     private static isKeywordLine(line: string): boolean {
-        const keywords = ['Feature:', 'Scenario:', 'Scenario Outline:', 'Background:', 
-                         'Given', 'When', 'Then', 'And', 'But', 'Examples:', '*'];
+        const keywords = ['Feature:', 'Scenario:', 'Scenario Outline:', 'Background:',
+            'Given', 'When', 'Then', 'And', 'But', 'Examples:', '*'];
         const trimmed = line.trim();
         return keywords.some(kw => trimmed.startsWith(kw));
     }
@@ -195,20 +196,20 @@ export class FeatureParser {
     private static isStepOrTable(line: string): boolean {
         const trimmed = line.trim();
         const stepKeywords = ['Given', 'When', 'Then', 'And', 'But', '*'];
-        return stepKeywords.some(kw => trimmed.startsWith(kw)) || 
-               trimmed.startsWith('|') ||
-               trimmed.startsWith('"""') ||
-               trimmed.startsWith("'''");
+        return stepKeywords.some(kw => trimmed.startsWith(kw)) ||
+            trimmed.startsWith('|') ||
+            trimmed.startsWith('"""') ||
+            trimmed.startsWith("'''");
     }
 
     /**
      * Find all feature files in workspace
      */
     public static async findFeatureFiles(workspaceFolder: vscode.Uri, featuresPath?: string): Promise<vscode.Uri[]> {
-        const pattern = featuresPath 
+        const pattern = featuresPath
             ? new vscode.RelativePattern(workspaceFolder, `${featuresPath}/**/*.feature`)
             : new vscode.RelativePattern(workspaceFolder, '**/*.feature');
-        
+
         return vscode.workspace.findFiles(pattern, '**/node_modules/**');
     }
 
@@ -234,7 +235,7 @@ export class FeatureParser {
      */
     public static getAllTags(features: Feature[]): string[] {
         const tags = new Set<string>();
-        
+
         for (const feature of features) {
             feature.tags.forEach(t => tags.add(t.name));
             for (const scenario of feature.scenarios) {
@@ -249,8 +250,8 @@ export class FeatureParser {
     /**
      * Find scenarios by tag
      */
-    public static findScenariosByTag(features: Feature[], tag: string): Array<{feature: Feature, scenario: Scenario}> {
-        const results: Array<{feature: Feature, scenario: Scenario}> = [];
+    public static findScenariosByTag(features: Feature[], tag: string): Array<{ feature: Feature, scenario: Scenario }> {
+        const results: Array<{ feature: Feature, scenario: Scenario }> = [];
 
         for (const feature of features) {
             for (const scenario of feature.scenarios) {
