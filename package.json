@@ -2,7 +2,7 @@
   "name": "behave-test-explorer",
   "displayName": "Behave BDD Test Explorer",
   "description": "Run and debug Behave BDD tests from VS Code Test Explorer with custom arguments support",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "SheikhArhaan",
   "icon": "icon.png",
   "engines": {
