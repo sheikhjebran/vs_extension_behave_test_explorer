@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export interface Tag {
@@ -44,12 +44,13 @@ export class FeatureParser {
     /**
      * Parse a single feature file and extract all features and scenarios
      */
-    public static parseFeatureFile(uri: vscode.Uri): Feature | null {
+    public static async parseFeatureFile(uri: vscode.Uri): Promise<Feature | null> {
         try {
-            const content = fs.readFileSync(uri.fsPath, 'utf-8');
+            const content = await fs.readFile(uri.fsPath, 'utf-8');
             return this.parseContent(content, uri);
         } catch (error) {
             console.error(`Error parsing feature file ${uri.fsPath}:`, error);
+            vscode.window.showErrorMessage(`Error parsing feature file: ${uri.fsPath}`);
             return null;
         }
     }
@@ -221,7 +222,7 @@ export class FeatureParser {
         const features: Feature[] = [];
 
         for (const uri of featureFiles) {
-            const feature = this.parseFeatureFile(uri);
+            const feature = await this.parseFeatureFile(uri);
             if (feature) {
                 features.push(feature);
             }

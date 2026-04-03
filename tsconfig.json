@@ -3,7 +3,9 @@
     "module": "commonjs",
     "target": "ES2022",
     "outDir": "out",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
@@ -12,7 +14,14 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "types": [
+      "node"
+    ]
   },
-  "exclude": ["node_modules", ".vscode-test", "out"]
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "out"
+  ]
 }

@@ -4,6 +4,9 @@ import { Feature, Scenario, FeatureParser } from './featureParser';
 import { TestRunner } from './testRunner';
 import { ConfigManager } from './configManager';
 
+/**
+ * Metadata for each test item in the controller.
+ */
 interface TestItemData {
     type: 'folder' | 'feature' | 'scenario';
     feature?: Feature;
@@ -11,6 +14,9 @@ interface TestItemData {
     folderPath?: string;
 }
 
+/**
+ * Main controller for Behave test integration with VS Code Test Explorer.
+ */
 export class BehaveTestController {
     private controller: vscode.TestController;
     private testRunner: TestRunner;
@@ -61,6 +67,18 @@ export class BehaveTestController {
         // Watch for feature file changes
         this.setupFileWatcher();
 
+        // Listen for configuration changes
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeConfiguration(e => {
+                if (e.affectsConfiguration('behaveTestExplorer.featuresPath')) {
+                    const config = vscode.workspace.getConfiguration('behaveTestExplorer');
+                    this.featuresPath = config.get<string>('featuresPath', 'features');
+                    this.setupFileWatcher();
+                    this.discoverTests();
+                }
+            })
+        );
+
         // Initial discovery
         this.discoverTests();
 
@@ -82,6 +100,9 @@ export class BehaveTestController {
 
     /**
      * Discover all tests in the workspace
+     */
+    /**
+     * Discover all tests in the workspace and update the test explorer.
      */
     public async discoverTests(): Promise<void> {
         const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -112,6 +133,9 @@ export class BehaveTestController {
 
     /**
      * Add a feature with folder hierarchy
+     */
+    /**
+     * Add a feature to the test explorer, creating folder hierarchy as needed.
      */
     private addFeatureWithHierarchy(feature: Feature, workspaceFolder: vscode.WorkspaceFolder): void {
         // Get the relative path from workspace/features folder

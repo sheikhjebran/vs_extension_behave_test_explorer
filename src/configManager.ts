@@ -1,10 +1,17 @@
+// @ts-ignore: vscode is available in the extension host
 import * as vscode from 'vscode';
 
+/**
+ * Represents a named argument preset for test runs.
+ */
 export interface ArgPreset {
     name: string;
     args: string[];
 }
 
+/**
+ * Manages configuration and argument presets for the extension.
+ */
 export class ConfigManager {
     private context: vscode.ExtensionContext | undefined;
     private currentPreset: string | undefined;
@@ -12,13 +19,30 @@ export class ConfigManager {
     /**
      * Initialize with extension context
      */
+    /**
+     * Initialize the config manager with the extension context.
+     */
     public initialize(context: vscode.ExtensionContext): void {
         this.context = context;
         this.currentPreset = context.workspaceState.get('currentPreset');
+
+        // Listen for configuration changes to customArgs
+        vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
+            if (e.affectsConfiguration('behaveTestExplorer.customArgs')) {
+                // If the current preset is no longer valid, reset to first available
+                const presets = this.getPresets();
+                if (presets.length > 0 && !presets.some(p => p.name === this.currentPreset)) {
+                    this.setCurrentPreset(presets[0].name);
+                }
+            }
+        });
     }
 
     /**
      * Get all argument presets from configuration
+     */
+    /**
+     * Get all argument presets from configuration.
      */
     public getPresets(): ArgPreset[] {
         const config = vscode.workspace.getConfiguration('behaveTestExplorer');
@@ -26,12 +50,15 @@ export class ConfigManager {
 
         return Object.entries(customArgs).map(([name, args]) => ({
             name,
-            args
+            args: args as string[]
         }));
     }
 
     /**
      * Get a specific preset by name
+     */
+    /**
+     * Get a specific preset by name.
      */
     public getPreset(name: string): ArgPreset | undefined {
         const presets = this.getPresets();
@@ -40,6 +67,9 @@ export class ConfigManager {
 
     /**
      * Set the current active preset
+     */
+    /**
+     * Set the current active preset.
      */
     public async setCurrentPreset(name: string | undefined): Promise<void> {
         this.currentPreset = name;
@@ -50,6 +80,9 @@ export class ConfigManager {
 
     /**
      * Get the current active preset
+     */
+    /**
+     * Get the current active preset.
      */
     public getCurrentPreset(): string | undefined {
         return this.currentPreset;

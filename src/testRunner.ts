@@ -30,7 +30,9 @@ export class TestRunner {
     ): Promise<RunResult> {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(feature.uri);
         if (!workspaceFolder) {
-            return { success: false, output: '', error: 'No workspace folder found' };
+            const errorMsg = 'No workspace folder found for the selected feature.';
+            vscode.window.showErrorMessage(errorMsg);
+            return { success: false, output: '', error: errorMsg };
         }
 
         // Build arguments
@@ -50,7 +52,9 @@ export class TestRunner {
     ): Promise<RunResult> {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(feature.uri);
         if (!workspaceFolder) {
-            return { success: false, output: '', error: 'No workspace folder found' };
+            const errorMsg = 'No workspace folder found for the selected feature.';
+            vscode.window.showErrorMessage(errorMsg);
+            return { success: false, output: '', error: errorMsg };
         }
 
         const args = await this.buildArgs(feature, scenario, customArgs);
@@ -93,7 +97,9 @@ export class TestRunner {
     public async debugFeature(feature: Feature, customArgs?: string[]): Promise<void> {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(feature.uri);
         if (!workspaceFolder) {
-            throw new Error('No workspace folder found');
+            const errorMsg = 'No workspace folder found for the selected feature.';
+            vscode.window.showErrorMessage(errorMsg);
+            throw new Error(errorMsg);
         }
 
         const args = await this.buildArgs(feature, undefined, customArgs);
@@ -111,7 +117,9 @@ export class TestRunner {
     ): Promise<void> {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(feature.uri);
         if (!workspaceFolder) {
-            throw new Error('No workspace folder found');
+            const errorMsg = 'No workspace folder found for the selected feature.';
+            vscode.window.showErrorMessage(errorMsg);
+            throw new Error(errorMsg);
         }
 
         const args = await this.buildArgs(feature, scenario, customArgs);
@@ -233,7 +241,7 @@ export class TestRunner {
             childProcess.on('error', (error: Error) => {
                 this.runningProcesses.delete(processId);
                 this.outputChannel.appendLine(`\nError: ${error.message}`);
-
+                vscode.window.showErrorMessage(`Test process error: ${error.message}`);
                 resolve({
                     success: false,
                     output,
